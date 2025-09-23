@@ -1,8 +1,8 @@
 namespace ScreenShareServer
 {
-    public partial class Form1 : Form
+    public partial class Server : Form
     {
-        public Form1()
+        public Server()
         {
             InitializeComponent();
         }

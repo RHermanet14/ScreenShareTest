@@ -1,6 +1,6 @@
 ﻿namespace ScreenShareServer
 {
-    partial class Form1
+    partial class Server
     {
         /// <summary>
         ///  Required designer variable.
@@ -28,10 +28,16 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
+            SuspendLayout();
+            // 
+            // Server
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
-            Text = "Form1";
+            Name = "Server";
+            Text = "Server";
+            ResumeLayout(false);
         }
 
         #endregion
