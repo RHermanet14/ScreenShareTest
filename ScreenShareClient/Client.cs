@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Sockets;
 
 namespace ScreenShareClient
@@ -104,8 +105,8 @@ namespace ScreenShareClient
 
     public partial class Connection
     {
-        private string IPAddress = "";
-        private int Port = 0;
+        private readonly string IPAddress = "";
+        private readonly int Port = 0;
         private Socket? clientSocket;
         private bool isConnected = false;
 
@@ -116,10 +117,26 @@ namespace ScreenShareClient
             Port = port;
         }
 
-        public void Connect()
+        public bool Connect()
         {
-            // TODO
-            isConnected = true;
+            try
+            {
+                isConnected = true;
+                IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
+                IPAddress ipAddr = System.Net.IPAddress.Parse(IPAddress);
+                IPEndPoint remoteEndPoint = new(ipAddr, Port);
+                clientSocket = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                clientSocket.Connect(remoteEndPoint);
+                isConnected = true;
+                return true;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                clientSocket?.Close();
+                isConnected = false;
+                return false;
+            }
         }
 
         public void Disconnect()
