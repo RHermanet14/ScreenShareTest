@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             PreferencesButton = new Button();
             ConnectButton = new Button();
             DisconnectButton = new Button();
@@ -38,6 +39,7 @@
             FullscreenButton = new Button();
             ScreenPanel = new Panel();
             pictureBox = new PictureBox();
+            ConnectTimer = new System.Windows.Forms.Timer(components);
             ScreenPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox).BeginInit();
             SuspendLayout();
@@ -75,23 +77,24 @@
             // IPLabel
             // 
             IPLabel.AutoSize = true;
-            IPLabel.Location = new Point(9, 418);
+            IPLabel.Location = new Point(12, 419);
             IPLabel.Name = "IPLabel";
-            IPLabel.Size = new Size(65, 15);
+            IPLabel.Size = new Size(77, 15);
             IPLabel.TabIndex = 4;
-            IPLabel.Text = "IP Address:";
+            IPLabel.Text = "IPv4 Address:";
             // 
             // IPTextBox
             // 
-            IPTextBox.Location = new Point(77, 415);
+            IPTextBox.Location = new Point(92, 415);
             IPTextBox.Name = "IPTextBox";
-            IPTextBox.Size = new Size(163, 23);
+            IPTextBox.Size = new Size(124, 23);
             IPTextBox.TabIndex = 5;
+            IPTextBox.KeyPress += IPTextBox_KeyPress;
             // 
             // PortLabel
             // 
             PortLabel.AutoSize = true;
-            PortLabel.Location = new Point(249, 418);
+            PortLabel.Location = new Point(233, 419);
             PortLabel.Name = "PortLabel";
             PortLabel.Size = new Size(32, 15);
             PortLabel.TabIndex = 6;
@@ -99,10 +102,11 @@
             // 
             // PortTextBox
             // 
-            PortTextBox.Location = new Point(287, 415);
+            PortTextBox.Location = new Point(271, 415);
             PortTextBox.Name = "PortTextBox";
             PortTextBox.Size = new Size(73, 23);
             PortTextBox.TabIndex = 7;
+            PortTextBox.KeyPress += PortTextBox_KeyPress;
             // 
             // FullscreenButton
             // 
@@ -132,6 +136,10 @@
             pictureBox.Size = new Size(776, 357);
             pictureBox.TabIndex = 0;
             pictureBox.TabStop = false;
+            // 
+            // ConnectTimer
+            // 
+            ConnectTimer.Interval = 5000;
             // 
             // Client
             // 
@@ -167,5 +175,6 @@
         private Button FullscreenButton;
         private Panel ScreenPanel;
         private PictureBox pictureBox;
+        private System.Windows.Forms.Timer ConnectTimer;
     }
 }
