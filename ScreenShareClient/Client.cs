@@ -8,28 +8,34 @@ namespace ScreenShareClient
         private bool isFullscreen = false;
         private bool isRunning = false;
         private Connection? connection = null;
+        private Rectangle originalPictureBounds; // Store original bounds of pictureBox
+        private Rectangle originalFormBounds; // Store original bounds of the form
 
         public Client()
         {
             InitializeComponent();
+            KeyPreview = true;
         }
 
-        private void ConnectButton_Click(object sender, EventArgs e)
+        private async void ConnectButton_Click(object sender, EventArgs e)
         {
             isRunning = true;
             DisconnectButton.Enabled = true;
             ConnectButton.Enabled = false;
-            ConnectTimer.Enabled = true;
             connection = new Connection(IPTextBox.Text, int.Parse(PortTextBox.Text));
+            connection.Connect(); // Forget using the timer and block until connected
+            await Task.Run(RunClient);
             // TODO
         }
 
-        private void ConnectTimer_Tick(object? sender, EventArgs e)
+        private async void RunClient()
         {
-            MessageBox.Show("It would run right now");
-            // Check if connected
-            // If so, isRunning = true
-            // If not, try again
+            while (isRunning)
+            {
+                // TODO
+                await Task.Delay(100); // Prevents high CPU usage, adjust as necessary
+                // Receive and display the screen data here
+            }
         }
 
         private void DisconnectButton_Click(object sender, EventArgs e)
@@ -37,9 +43,8 @@ namespace ScreenShareClient
             isRunning = false;
             DisconnectButton.Enabled = false;
             ConnectButton.Enabled = true;
-            ConnectTimer.Enabled = false;
             connection?.Disconnect();
-            //connection = null;
+            connection = null;
             // TODO
         }
 
@@ -48,7 +53,6 @@ namespace ScreenShareClient
             LoadPreferences();
             DisconnectButton.Enabled = false;
             KeyDown += new KeyEventHandler(Client_KeyDown);
-            ConnectTimer.Tick += ConnectTimer_Tick;
             // TODO
         }
 
@@ -57,10 +61,43 @@ namespace ScreenShareClient
             if (e.KeyCode == Keys.Escape)
             {
                 isFullscreen = false;
+                HandleFullscreen();
             }
             else if (e.KeyCode == Keys.F11)
             {
                 isFullscreen = !isFullscreen;
+                HandleFullscreen();
+            }
+        }
+
+        private void FullscreenButton_Click(object sender, EventArgs e)
+        {
+            isFullscreen = !isFullscreen; // Switch to just true (or not) when implementing fullscreen picture box
+            HandleFullscreen();
+        }
+
+        private void HandleFullscreen()
+        {
+            if (isFullscreen)
+            {
+                originalPictureBounds = pictureBox.Bounds;
+                originalFormBounds = Bounds;
+
+                FormBorderStyle = FormBorderStyle.None;
+                WindowState = FormWindowState.Maximized;
+
+                pictureBox.BringToFront();
+                pictureBox.Dock = DockStyle.Fill;
+            }
+            else
+            {
+                FormBorderStyle = FormBorderStyle.Sizable;
+                WindowState = FormWindowState.Normal;
+
+                pictureBox.Dock = DockStyle.None;
+                pictureBox.Bounds = originalPictureBounds;
+                pictureBox.SendToBack();
+                Bounds = originalFormBounds;
             }
         }
 
@@ -76,14 +113,6 @@ namespace ScreenShareClient
             Properties.Settings.Default.Port = PortTextBox.Text;
             Properties.Settings.Default.Save();
             MessageBox.Show("Preferences Successfully Saved");
-        }
-
-        private void FullscreenButton_Click(object sender, EventArgs e)
-        {
-            isFullscreen = true;
-            // TODO
-            // pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
-            // Or just handle it where ever the image is drawn
         }
 
         private void PortTextBox_KeyPress(object sender, KeyPressEventArgs e)

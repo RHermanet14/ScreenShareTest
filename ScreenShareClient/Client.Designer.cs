@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
             PreferencesButton = new Button();
             ConnectButton = new Button();
             DisconnectButton = new Button();
@@ -37,10 +36,7 @@
             PortLabel = new Label();
             PortTextBox = new TextBox();
             FullscreenButton = new Button();
-            ScreenPanel = new Panel();
             pictureBox = new PictureBox();
-            ConnectTimer = new System.Windows.Forms.Timer(components);
-            ScreenPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox).BeginInit();
             SuspendLayout();
             // 
@@ -119,34 +115,22 @@
             FullscreenButton.UseVisualStyleBackColor = true;
             FullscreenButton.Click += FullscreenButton_Click;
             // 
-            // ScreenPanel
-            // 
-            ScreenPanel.BackColor = SystemColors.ControlLight;
-            ScreenPanel.BorderStyle = BorderStyle.Fixed3D;
-            ScreenPanel.Controls.Add(pictureBox);
-            ScreenPanel.Location = new Point(12, 12);
-            ScreenPanel.Name = "ScreenPanel";
-            ScreenPanel.Size = new Size(776, 357);
-            ScreenPanel.TabIndex = 9;
-            // 
             // pictureBox
             // 
-            pictureBox.Location = new Point(-2, -2);
+            pictureBox.BackColor = SystemColors.ControlLight;
+            pictureBox.BorderStyle = BorderStyle.Fixed3D;
+            pictureBox.Location = new Point(12, 12);
             pictureBox.Name = "pictureBox";
             pictureBox.Size = new Size(776, 357);
-            pictureBox.TabIndex = 0;
+            pictureBox.TabIndex = 9;
             pictureBox.TabStop = false;
-            // 
-            // ConnectTimer
-            // 
-            ConnectTimer.Interval = 5000;
             // 
             // Client
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
-            Controls.Add(ScreenPanel);
+            Controls.Add(pictureBox);
             Controls.Add(FullscreenButton);
             Controls.Add(PortTextBox);
             Controls.Add(PortLabel);
@@ -158,7 +142,6 @@
             Name = "Client";
             Text = "Client";
             Load += Client_Load;
-            ScreenPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)pictureBox).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -173,8 +156,6 @@
         private Label PortLabel;
         private TextBox PortTextBox;
         private Button FullscreenButton;
-        private Panel ScreenPanel;
         private PictureBox pictureBox;
-        private System.Windows.Forms.Timer ConnectTimer;
     }
 }
