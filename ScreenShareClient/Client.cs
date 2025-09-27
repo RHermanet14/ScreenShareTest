@@ -84,7 +84,7 @@ namespace ScreenShareClient
                 originalFormBounds = Bounds;
 
                 FormBorderStyle = FormBorderStyle.None;
-                WindowState = FormWindowState.Maximized;
+                //WindowState = FormWindowState.Maximized; // Keep or remove?
 
                 pictureBox.BringToFront();
                 pictureBox.Dock = DockStyle.Fill;
@@ -92,7 +92,7 @@ namespace ScreenShareClient
             else
             {
                 FormBorderStyle = FormBorderStyle.Sizable;
-                WindowState = FormWindowState.Normal;
+                //WindowState = FormWindowState.Normal; // Keep or remove?
 
                 pictureBox.Dock = DockStyle.None;
                 pictureBox.Bounds = originalPictureBounds;
