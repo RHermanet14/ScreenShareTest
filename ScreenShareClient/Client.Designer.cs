@@ -141,6 +141,7 @@
             Controls.Add(PreferencesButton);
             Name = "Client";
             Text = "Client";
+            FormClosing += Client_FormClosing;
             Load += Client_Load;
             ((System.ComponentModel.ISupportInitialize)pictureBox).EndInit();
             ResumeLayout(false);

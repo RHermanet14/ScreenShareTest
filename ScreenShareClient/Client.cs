@@ -1,15 +1,22 @@
+using System;
+using System.Drawing;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ScreenShareClient
 {
     public partial class Client : Form
     {
+        #region variables
         private bool isFullscreen = false;
         private bool isRunning = false;
         private Connection? connection = null;
         private Rectangle originalPictureBounds; // Store original bounds of pictureBox
         private Rectangle originalFormBounds; // Store original bounds of the form
+        #endregion
 
         public Client()
         {
@@ -25,7 +32,6 @@ namespace ScreenShareClient
             connection = new Connection(IPTextBox.Text, int.Parse(PortTextBox.Text));
             connection.Connect(); // Forget using the timer and block until connected
             await Task.Run(RunClient);
-            // TODO
         }
 
         private async void RunClient()
@@ -35,16 +41,56 @@ namespace ScreenShareClient
                 // TODO
                 await Task.Delay(100); // Prevents high CPU usage, adjust as necessary
                 // Receive and display the screen data here
+                // connection?.GetScreen();
+                // connection?.StillRunning();
+            }
+        }
+
+        private void SetPictureBox(byte[] imageBuffer)
+        {
+            if (imageBuffer == null || imageBuffer.Length == 0) return;
+
+            try
+            {
+                pictureBox.Image?.Dispose();
+                pictureBox.Image = null;
+                using (var ms = new MemoryStream(imageBuffer))
+                {
+                    using (var originalImage = Image.FromStream(ms))
+                    {
+                        if (originalImage.Width > 3840 || originalImage.Height > 2160)
+                        {
+                            int maxWidth = Math.Min(1920, pictureBox.Width * 2);
+                            int maxHeight = Math.Min(1080, pictureBox.Height * 2);
+
+                            double scaleX = (double)maxWidth / originalImage.Width;
+                            double scaleY = (double)maxHeight / originalImage.Height;
+                            double scale = Math.Min(scaleX, scaleY);
+
+                            int newWidth = (int)(originalImage.Width * scale);
+                            int newHeight = (int)(originalImage.Height * scale);
+
+                            pictureBox.Image = new Bitmap(originalImage, newWidth, newHeight);
+                        }
+                        else
+                        {
+                            pictureBox.Image = new Bitmap(originalImage);
+                        }
+                    }
+                }
+                pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
             }
         }
 
         private void DisconnectButton_Click(object sender, EventArgs e)
         {
-            isRunning = false;
             DisconnectButton.Enabled = false;
             ConnectButton.Enabled = true;
-            connection?.Disconnect();
-            connection = null;
+            Disconnect();
             // TODO
         }
 
@@ -72,7 +118,7 @@ namespace ScreenShareClient
 
         private void FullscreenButton_Click(object sender, EventArgs e)
         {
-            isFullscreen = !isFullscreen; // Switch to just true (or not) when implementing fullscreen picture box
+            isFullscreen = true;
             HandleFullscreen();
         }
 
@@ -130,6 +176,18 @@ namespace ScreenShareClient
                 e.Handled = true;
             }
         }
+
+        private void Client_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Disconnect();
+        }
+
+        private void Disconnect()
+        {
+            isRunning = false;
+            connection?.Disconnect();
+            connection = null;
+        }
     }
 
     public partial class Connection
@@ -166,6 +224,55 @@ namespace ScreenShareClient
                 isConnected = false;
                 return false;
             }
+        }
+
+        public async Task<byte[]?> GetScreen()
+        {
+            if (!isConnected || clientSocket == null) return null;
+            
+            try
+            {
+                byte[] lengthBuffer = new byte[4];
+                int bytesRead = 0;
+
+                while (bytesRead < 4)
+                {
+                    int read = await clientSocket.ReceiveAsync(
+                        new ArraySegment<byte>(
+                            lengthBuffer, bytesRead, 4 - bytesRead
+                        ), SocketFlags.None
+                    );
+                    if (read == 0) return null;
+                    bytesRead += read;
+                }
+                int imageLength = BitConverter.ToInt32(lengthBuffer, 0);
+
+                byte[] imageBuffer = new byte[imageLength];
+                bytesRead = 0;
+                int bufferSize = Math.Min(65536, imageLength);
+
+                while (bytesRead < imageLength)
+                {
+                    int toReceive = Math.Min(bufferSize, imageLength - bytesRead);
+                    int read = await clientSocket.ReceiveAsync(
+                        new ArraySegment<byte>(imageBuffer, bytesRead, toReceive),
+                        SocketFlags.None);
+                    if (read == 0) return null;
+                    bytesRead += read;
+                }
+                return imageBuffer;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                //Disconnect();
+                return null;
+            }  
+        }
+
+        public bool StillRunning()
+        {
+            return isConnected; // TODO
         }
 
         public void Disconnect()
