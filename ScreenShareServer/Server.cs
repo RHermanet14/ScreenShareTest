@@ -101,4 +101,57 @@ namespace ScreenShareServer
             toolTip1.SetToolTip(IPLabel, "Click To Copy IP To Clipboard.");
         }
     }
+
+    public partial class Connection
+    {
+        private Socket? serverSocket;
+        private readonly int Port;
+        private bool isConnected = false;
+
+        public Connection(int port)
+        {
+            Port = port;
+        }
+
+        public void Connect() 
+        {
+            IPAddress ip = IPAddress.Any; // Listen on all available network interfaces
+            IPEndPoint localEndPoint = new IPEndPoint(ip, Port);
+            serverSocket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                serverSocket.Bind(localEndPoint);
+                serverSocket.Listen(); // Max pending connections
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}");
+            }
+        }
+
+        public void Disconnect()
+        {
+            isConnected = false;
+            try
+            {
+                serverSocket?.Shutdown(SocketShutdown.Both);
+            }
+            catch
+            {
+                //nothing for now
+            }
+
+            serverSocket?.Close();
+        }
+
+        public void SendScreen()
+        {
+            if (!isConnected) return;
+            // Get screenshot of desktop
+            // convert to byte array
+            // send byte array to client
+            // acts like Kvm client
+            // TODO
+        }
+    }
 }
