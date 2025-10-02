@@ -31,6 +31,7 @@ namespace ScreenShareClient
             ConnectButton.Enabled = false;
             connection = new Connection(IPTextBox.Text, int.Parse(PortTextBox.Text));
             connection.Connect(); // Forget using the timer and block until connected
+            MessageBox.Show("Connected to Server");
             await Task.Run(RunClient);
         }
 
@@ -228,7 +229,7 @@ namespace ScreenShareClient
 
         public async Task<byte[]?> GetScreen()
         {
-            if (!isConnected || clientSocket == null) return null;
+            if (!isConnected || clientSocket == null) return null; // Must act like Kvm Server!!!
             
             try
             {
