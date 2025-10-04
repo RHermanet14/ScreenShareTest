@@ -31,16 +31,21 @@ namespace ScreenShareClient
             ConnectButton.Enabled = false;
             connection = new Connection(IPTextBox.Text, int.Parse(PortTextBox.Text));
             connection.Connect(); // Forget using the timer and block until connected
-            MessageBox.Show("Connected to Server");
+            MessageBox.Show($"Connected to Server: {connection.StillRunning()}");
             await Task.Run(RunClient);
         }
 
         private async void RunClient()
         {
+            byte[] bitmap;
             while (isRunning)
             {
+                if (connection == null) return;
+                bitmap = await connection.GetScreen() ?? [0]; // temp fix
+                SetPictureBox(bitmap);
+                isRunning = connection.StillRunning(); // Needed?
                 // TODO
-                await Task.Delay(100); // Prevents high CPU usage, adjust as necessary
+                //await Task.Delay(100); // Prevents high CPU usage, adjust as necessary
                 // Receive and display the screen data here
                 // connection?.GetScreen();
                 // connection?.StillRunning();
