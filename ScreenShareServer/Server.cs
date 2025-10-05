@@ -7,6 +7,7 @@ namespace ScreenShareServer
 {
     public partial class Server : Form
     {
+        private Connection? connection = null;
         public Server()
         {
             InitializeComponent();
@@ -21,7 +22,7 @@ namespace ScreenShareServer
         {
             StartButton.Enabled = false;
             StopButton.Enabled = true;
-            // TODO
+            connection = new Connection(int.Parse(PortTextBox.Text));
         }
 
         private void StopButton_Click(object sender, EventArgs e)
@@ -39,7 +40,7 @@ namespace ScreenShareServer
 
         private void KillServer()
         {
-            // TODO
+            connection?.Disconnect();
         }
 
         private void Server_Load(object sender, EventArgs e)
