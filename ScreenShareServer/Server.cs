@@ -23,6 +23,7 @@ namespace ScreenShareServer
             StartButton.Enabled = false;
             StopButton.Enabled = true;
             connection = new Connection(int.Parse(PortTextBox.Text));
+            connection?.Connect();
         }
 
         private void StopButton_Click(object sender, EventArgs e)
