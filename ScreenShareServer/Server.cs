@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Drawing.Imaging;
 
 namespace ScreenShareServer
 {
@@ -146,14 +147,17 @@ namespace ScreenShareServer
             serverSocket?.Close();
         }
 
-        public void SendScreen()
+        public byte[] GetScreen()
         {
-            if (!isConnected) return;
-            // Get screenshot of desktop
-            // convert to byte array
-            // send byte array to client
-            // acts like Kvm client
-            // TODO
+            if (!isConnected) return [0];
+
+            Rectangle bounds = Screen.GetBounds(Point.Empty);
+            using Bitmap bitmap = new(bounds.Width, bounds.Height);
+            using Graphics g = Graphics.FromImage(bitmap);
+            g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+            using MemoryStream stream = new();
+            bitmap.Save(stream, ImageFormat.Png);
+            return stream.ToArray();
         }
     }
 }
