@@ -26,13 +26,20 @@ namespace ScreenShareClient
 
         private async void ConnectButton_Click(object sender, EventArgs e)
         {
-            isRunning = true;
             DisconnectButton.Enabled = true;
             ConnectButton.Enabled = false;
             connection = new Connection(IPTextBox.Text, int.Parse(PortTextBox.Text));
-            connection.Connect(); // Forget using the timer and block until connected
-            MessageBox.Show($"Connected to Server: {connection.StillRunning()}");
-            await Task.Run(RunClient);
+            isRunning = connection.Connect();
+            if (isRunning)
+            {
+                MessageBox.Show($"Connected to Server: {connection.StillRunning()}");
+                await Task.Run(RunClient);
+            } else
+            {
+                MessageBox.Show($"Error: connect function returned false");
+                DisconnectButton_Click(sender, e);
+            }
+            
         }
 
         private async void RunClient()
@@ -41,14 +48,12 @@ namespace ScreenShareClient
             while (isRunning)
             {
                 if (connection == null) return;
-                bitmap = await connection.GetScreen() ?? [0]; // temp fix
+                // Accept and check request
+                bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
                 SetPictureBox(bitmap);
                 isRunning = connection.StillRunning(); // Needed?
                 // TODO
-                //await Task.Delay(100); // Prevents high CPU usage, adjust as necessary
-                // Receive and display the screen data here
-                // connection?.GetScreen();
-                // connection?.StillRunning();
+                //await Task.Delay(100); // Prevents high CPU usage, adjust as necessary;
             }
         }
 
@@ -62,27 +67,8 @@ namespace ScreenShareClient
                 pictureBox.Image = null;
                 using (var ms = new MemoryStream(imageBuffer))
                 {
-                    using (var originalImage = Image.FromStream(ms))
-                    {
-                        if (originalImage.Width > 3840 || originalImage.Height > 2160)
-                        {
-                            int maxWidth = Math.Min(1920, pictureBox.Width * 2);
-                            int maxHeight = Math.Min(1080, pictureBox.Height * 2);
-
-                            double scaleX = (double)maxWidth / originalImage.Width;
-                            double scaleY = (double)maxHeight / originalImage.Height;
-                            double scale = Math.Min(scaleX, scaleY);
-
-                            int newWidth = (int)(originalImage.Width * scale);
-                            int newHeight = (int)(originalImage.Height * scale);
-
-                            pictureBox.Image = new Bitmap(originalImage, newWidth, newHeight);
-                        }
-                        else
-                        {
-                            pictureBox.Image = new Bitmap(originalImage);
-                        }
-                    }
+                    using var originalImage = Image.FromStream(ms);
+                    pictureBox.Image = new Bitmap(originalImage);
                 }
                 pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
             }
@@ -200,8 +186,9 @@ namespace ScreenShareClient
     {
         private readonly string IPAddress = "";
         private readonly int Port = 0;
-        private Socket? clientSocket;
-        private bool isConnected = false;
+        private Socket? _clientSocket;
+        private Socket? _currentSocket;
+        private bool _isConnected = false;
 
         public Connection() { }
         public Connection(string ipAddress, int port)
@@ -214,27 +201,45 @@ namespace ScreenShareClient
         {
             try
             {
-                isConnected = true;
+                _isConnected = true;
                 IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
                 IPAddress ipAddr = System.Net.IPAddress.Parse(IPAddress);
                 IPEndPoint remoteEndPoint = new(ipAddr, Port);
-                clientSocket = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                clientSocket.Connect(remoteEndPoint);
-                isConnected = true;
+                _clientSocket = new Socket(ipAddr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                _clientSocket.Connect(remoteEndPoint);
+                _isConnected = true;
                 return true;
             }
             catch(Exception ex)
             {
                 MessageBox.Show("Error: " + ex.Message);
-                clientSocket?.Close();
-                isConnected = false;
+                _clientSocket?.Close();
+                _isConnected = false;
                 return false;
             }
         }
 
+        public bool AcceptRequest()
+        {
+            if (_clientSocket == null || _currentSocket != null) return false;
+            try
+            {
+                if (_clientSocket.Poll(0, SelectMode.SelectRead))
+                {
+                    _currentSocket = _clientSocket.Accept();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error accepting coordinate client: {ex.Message}");
+            }
+            return false;
+        }
+
         public async Task<byte[]?> GetScreen()
         {
-            if (!isConnected || clientSocket == null) return null; // Must act like Kvm Server!!!
+            if (!_isConnected || _clientSocket == null) return null; // Must act like Kvm Server!!!
             
             try
             {
@@ -243,7 +248,7 @@ namespace ScreenShareClient
 
                 while (bytesRead < 4)
                 {
-                    int read = await clientSocket.ReceiveAsync(
+                    int read = await _clientSocket.ReceiveAsync(
                         new ArraySegment<byte>(
                             lengthBuffer, bytesRead, 4 - bytesRead
                         ), SocketFlags.None
@@ -260,7 +265,7 @@ namespace ScreenShareClient
                 while (bytesRead < imageLength)
                 {
                     int toReceive = Math.Min(bufferSize, imageLength - bytesRead);
-                    int read = await clientSocket.ReceiveAsync(
+                    int read = await _clientSocket.ReceiveAsync(
                         new ArraySegment<byte>(imageBuffer, bytesRead, toReceive),
                         SocketFlags.None);
                     if (read == 0) return null;
@@ -278,22 +283,47 @@ namespace ScreenShareClient
 
         public bool StillRunning()
         {
-            return isConnected; // TODO
+            return _isConnected; // TODO
+        }
+
+        private void CloseCurrentClient()
+        {
+            if (_currentSocket != null)
+            {
+                try
+                {
+                    if (_currentSocket.Connected)
+                    {
+                        _currentSocket.Shutdown(SocketShutdown.Both);
+                    }
+                    _currentSocket.Close();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error closing current client: {ex.Message}");
+                }
+                finally
+                {
+                    _currentSocket = null;
+                    _isConnected = false;
+                }
+            }
         }
 
         public void Disconnect()
         {
             // TODO
-            isConnected = false;
+            CloseCurrentClient();
+            _isConnected = false;
             try
             {
-                clientSocket?.Shutdown(SocketShutdown.Both);
+                _clientSocket?.Shutdown(SocketShutdown.Both);
             }
             catch
             {
                 //nothing for now
             }
-            clientSocket?.Close();
+            _clientSocket?.Close();
         }
     }
 }
