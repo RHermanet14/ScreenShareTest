@@ -48,12 +48,16 @@ namespace ScreenShareClient
             while (isRunning)
             {
                 if (connection == null) return;
-                // Accept and check request
+                if (!connection.AcceptRequest())
+                {
+                    MessageBox.Show("Error: AcceptRequest function returned false");
+                    return;
+                }
                 bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
                 SetPictureBox(bitmap);
                 isRunning = connection.StillRunning(); // Needed?
                 // TODO
-                //await Task.Delay(100); // Prevents high CPU usage, adjust as necessary;
+                //await Task.Delay(100);
             }
         }
 
@@ -232,7 +236,7 @@ namespace ScreenShareClient
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error accepting coordinate client: {ex.Message}");
+                MessageBox.Show($"Error accepting coordinate client: {ex.Message}");
             }
             return false;
         }
