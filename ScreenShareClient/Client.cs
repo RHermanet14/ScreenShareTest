@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace ScreenShareClient
 {
-    public partial class Client : Form
+    public partial class Client : Form//, IDisposable
     {
         #region variables
         private bool isFullscreen = false;
@@ -16,6 +16,8 @@ namespace ScreenShareClient
         private Connection? connection = null;
         private Rectangle originalPictureBounds; // Store original bounds of pictureBox
         private Rectangle originalFormBounds; // Store original bounds of the form
+        private Task? _backgroundTask;
+        private CancellationTokenSource? _cts;
         #endregion
 
         public Client()
@@ -24,7 +26,7 @@ namespace ScreenShareClient
             KeyPreview = true;
         }
 
-        private async void ConnectButton_Click(object sender, EventArgs e)
+        private void ConnectButton_Click(object sender, EventArgs e)
         {
             DisconnectButton.Enabled = true;
             ConnectButton.Enabled = false;
@@ -32,8 +34,10 @@ namespace ScreenShareClient
             isRunning = connection.Connect();
             if (isRunning)
             {
-                MessageBox.Show($"Connected to Server: {connection.StillRunning()}");
-                await Task.Run(RunClient);
+                //MessageBox.Show($"Connected to Server: {connection.StillRunning()}");
+                _cts = new CancellationTokenSource();
+                _backgroundTask = RunClient(_cts.Token);
+                //await Task.Run(RunClient);
             } else
             {
                 MessageBox.Show($"Error: connect function returned false");
@@ -42,23 +46,67 @@ namespace ScreenShareClient
             
         }
 
-        private async void RunClient()
+        private void StopToken()
+        {
+            _cts?.Cancel();
+        }
+
+        private async Task StopTokenAsync()
+        {
+            _cts?.Cancel();
+            if (_backgroundTask != null)
+            {
+                try
+                {
+                    await _backgroundTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    //
+                }
+            }
+            _cts?.Dispose();
+            _cts = null;
+        }
+
+        /*
+        public void Dispose()
+        {
+            StopToken();
+            _cts?.Dispose();
+            connection?.Disconnect();
+        }
+        */
+
+        private async Task RunClient(CancellationToken ct)
         {
             byte[] bitmap;
-            while (isRunning)
+            try
             {
-                if (connection == null) return;
-                if (!connection.AcceptRequest())
+                while (isRunning && !ct.IsCancellationRequested)
                 {
-                    MessageBox.Show("Error: AcceptRequest function returned false");
-                    return;
+                    if (connection == null) return;
+                    if (!connection.AcceptRequest())
+                    {
+                        MessageBox.Show("Error: AcceptRequest function returned false");
+                        return;
+                    }
+                    bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
+                    SetPictureBox(bitmap);
+                    isRunning = connection.StillRunning(); // Needed?
                 }
-                bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
-                SetPictureBox(bitmap);
-                isRunning = connection.StillRunning(); // Needed?
-                // TODO
-                //await Task.Delay(100);
             }
+            catch(OperationCanceledException)
+            {
+                MessageBox.Show("Operation was cancelled.");
+                // Handle cancellation if needed
+                return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                return;
+            } 
         }
 
         private void SetPictureBox(byte[] imageBuffer)
@@ -87,6 +135,7 @@ namespace ScreenShareClient
             DisconnectButton.Enabled = false;
             ConnectButton.Enabled = true;
             Disconnect();
+            StopToken();
             // TODO
         }
 
