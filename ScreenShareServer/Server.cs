@@ -8,7 +8,12 @@ namespace ScreenShareServer
 {
     public partial class Server : Form
     {
+        #region variables
+        private volatile bool isRunning = false;
         private Connection? connection = null;
+        private Task? _backgroundTask;
+        #endregion
+
         public Server()
         {
             InitializeComponent();
@@ -24,7 +29,39 @@ namespace ScreenShareServer
             StartButton.Enabled = false;
             StopButton.Enabled = true;
             connection = new Connection(int.Parse(PortTextBox.Text));
-            connection?.Connect();
+            isRunning = connection.Connect();
+            if (isRunning)
+            {
+                _backgroundTask = Task.Run(RunServer);
+            } 
+            else {
+                MessageBox.Show($"Error: connect function returned false");
+                StopButton_Click(sender, e);
+            }
+        }
+
+        private void RunServer()
+        {
+            byte[] arr;
+            try
+            {
+                while (isRunning)
+                {
+                    if (connection == null) return;
+                    arr = connection.GetScreen();
+                    connection.SendScreen(arr);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Operation was cancelled.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                return;
+            }
         }
 
         private void StopButton_Click(object sender, EventArgs e)
@@ -32,6 +69,7 @@ namespace ScreenShareServer
             StartButton.Enabled = true;
             StopButton.Enabled = false;
             KillServer();
+            isRunning = false;
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -42,7 +80,9 @@ namespace ScreenShareServer
 
         private void KillServer()
         {
+            isRunning = false;
             connection?.Disconnect();
+            connection = null;
         }
 
         private void Server_Load(object sender, EventArgs e)
@@ -109,14 +149,14 @@ namespace ScreenShareServer
     {
         private Socket? serverSocket;
         private readonly int Port;
-        private bool isConnected = false;
+        private volatile bool _isConnected = false;
 
         public Connection(int port)
         {
             Port = port;
         }
 
-        public void Connect() 
+        public bool Connect() 
         {
             IPAddress ip = IPAddress.Any; // Listen on all available network interfaces
             IPEndPoint localEndPoint = new IPEndPoint(ip, Port);
@@ -125,16 +165,21 @@ namespace ScreenShareServer
             {
                 serverSocket.Bind(localEndPoint);
                 serverSocket.Listen(); // Max pending connections
+                _isConnected = true;
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error: {ex.Message}");
+                serverSocket?.Close();
+                _isConnected = false;
+                return false;
             }
         }
 
         public void Disconnect()
         {
-            isConnected = false;
+            _isConnected = false;
             try
             {
                 serverSocket?.Shutdown(SocketShutdown.Both);
@@ -149,7 +194,7 @@ namespace ScreenShareServer
 
         public byte[] GetScreen()
         {
-            if (!isConnected) return [0];
+            if (!_isConnected) return [0];
 
             Rectangle bounds = Screen.GetBounds(Point.Empty);
             using Bitmap bitmap = new(bounds.Width, bounds.Height);
@@ -158,6 +203,11 @@ namespace ScreenShareServer
             using MemoryStream stream = new();
             bitmap.Save(stream, ImageFormat.Png);
             return stream.ToArray();
+        }
+
+        public void SendScreen(byte[] screen)
+        {
+
         }
     }
 }
