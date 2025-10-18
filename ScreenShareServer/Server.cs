@@ -205,9 +205,44 @@ namespace ScreenShareServer
             return stream.ToArray();
         }
 
-        public void SendScreen(byte[] screen)
+        public async Task<bool> SendScreen(byte[] screen)
         {
+            if (!_isConnected || serverSocket == null) return false;
 
+            try
+            {
+                byte[] lengthBuffer = BitConverter.GetBytes(screen.Length);
+                int bytesSent = 0;
+                while (bytesSent < 4)
+                {
+                    int sent = await serverSocket.SendAsync(
+                        new ArraySegment<byte>(lengthBuffer, bytesSent, 4 - bytesSent),
+                        SocketFlags.None
+                    );
+                    if (sent == 0) return false;
+                    bytesSent += sent;
+                }
+                // Send image data
+                bytesSent = 0;
+                int bufferSize = Math.Min(65536, screen.Length);
+                while (bytesSent < screen.Length)
+                {
+                    int toSend = Math.Min(bufferSize, screen.Length - bytesSent);
+                    int sent = await serverSocket.SendAsync(
+                        new ArraySegment<byte>(screen, bytesSent, toSend),
+                        SocketFlags.None
+                    );
+                    if (sent == 0) return false;
+                    bytesSent += sent;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+                //Disconnect();
+                return false;
+            }
         }
     }
 }
