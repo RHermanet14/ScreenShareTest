@@ -31,19 +31,8 @@ namespace ScreenShareClient
             DisconnectButton.Enabled = true;
             ConnectButton.Enabled = false;
             connection = new Connection(IPTextBox.Text, int.Parse(PortTextBox.Text));
-            isRunning = connection.Connect();
-            if (isRunning)
-            {
-                //MessageBox.Show($"Connected to Server: {connection.StillRunning()}");
-                _cts = new CancellationTokenSource();
-                _backgroundTask = RunClient(_cts.Token);
-                //await Task.Run(RunClient);
-            } else
-            {
-                MessageBox.Show($"Error: connect function returned false");
-                DisconnectButton_Click(sender, e);
-            }
-            
+            _cts = new CancellationTokenSource();
+            _backgroundTask = Task.Run(() => RunClient(_cts.Token));
         }
 
         private void StopToken()
@@ -69,20 +58,18 @@ namespace ScreenShareClient
             _cts = null;
         }
 
-        /*
-        public void Dispose()
-        {
-            StopToken();
-            _cts?.Dispose();
-            connection?.Disconnect();
-        }
-        */
-
         private async Task RunClient(CancellationToken ct)
         {
             byte[] bitmap;
             try
             {
+                bool isRunning = connection!.Connect(); // move connection initialization into RunClient?
+                if (!isRunning)
+                {
+                    MessageBox.Show("Error: connect function returned false");
+                    DisconnectButton.Invoke(new Action(() => DisconnectButton.Enabled = false));
+                    return;
+                }
                 while (isRunning && !ct.IsCancellationRequested)
                 {
                     if (connection == null) return;
@@ -135,7 +122,7 @@ namespace ScreenShareClient
             DisconnectButton.Enabled = false;
             ConnectButton.Enabled = true;
             Disconnect();
-            StopToken();
+            //StopToken();
             // TODO
         }
 
@@ -232,6 +219,7 @@ namespace ScreenShareClient
             isRunning = false;
             connection?.Disconnect();
             connection = null;
+            StopTokenAsync().Wait(); // Or just StopToken();
         }
     }
 
@@ -254,7 +242,6 @@ namespace ScreenShareClient
         {
             try
             {
-                _isConnected = true;
                 IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
                 IPAddress ipAddr = System.Net.IPAddress.Parse(IPAddress);
                 IPEndPoint remoteEndPoint = new(ipAddr, Port);
