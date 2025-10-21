@@ -66,8 +66,10 @@ namespace ScreenShareClient
                 isRunning = connection!.Connect(); // move connection initialization into RunClient?
                 if (!isRunning)
                 {
-                    MessageBox.Show("Error: connect function returned false");
-                    DisconnectButton.Invoke(new Action(() => DisconnectButton.Enabled = false));
+                    Invoke(() => {
+                        MessageBox.Show("Error: Could not connect to server");
+                        DisconnectButton_Click(this, EventArgs.Empty); // Might need Invoke in click function and bool if coming from background thread
+                    });
                     return;
                 }
                 while (isRunning && !ct.IsCancellationRequested)
@@ -75,7 +77,10 @@ namespace ScreenShareClient
                     if (connection == null) return;
                     if (!connection.AcceptRequest())
                     {
-                        MessageBox.Show("Error: AcceptRequest function returned false");
+                        Invoke(() =>
+                        {
+                            MessageBox.Show("Error: AcceptRequest function returned false");
+                        });
                         return;
                     }
                     bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
@@ -85,13 +90,18 @@ namespace ScreenShareClient
             }
             catch(OperationCanceledException)
             {
-                MessageBox.Show("Operation was cancelled.");
+                Invoke(() =>
+                {
+                    MessageBox.Show("Operation was cancelled.");
+                });
                 // Handle cancellation if needed
                 return;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error: " + ex.Message);
+                Invoke(() => {
+                    MessageBox.Show("Error: " + ex.Message);
+                });
                 return;
             } 
         }
