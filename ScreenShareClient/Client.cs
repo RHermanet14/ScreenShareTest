@@ -63,7 +63,7 @@ namespace ScreenShareClient
             byte[] bitmap;
             try
             {
-                bool isRunning = connection!.Connect(); // move connection initialization into RunClient?
+                isRunning = connection!.Connect(); // move connection initialization into RunClient?
                 if (!isRunning)
                 {
                     MessageBox.Show("Error: connect function returned false");
