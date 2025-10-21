@@ -289,7 +289,7 @@ namespace ScreenShareClient
 
         public async Task<byte[]?> GetScreen()
         {
-            if (!_isConnected || _clientSocket == null) return null; // Must act like Kvm Server!!!
+            if (!_isConnected || _currentSocket == null) return null; // Must act like Kvm Server!!!
             
             try
             {
@@ -298,7 +298,7 @@ namespace ScreenShareClient
 
                 while (bytesRead < 4)
                 {
-                    int read = await _clientSocket.ReceiveAsync(
+                    int read = await _currentSocket.ReceiveAsync(
                         new ArraySegment<byte>(
                             lengthBuffer, bytesRead, 4 - bytesRead
                         ), SocketFlags.None
@@ -315,7 +315,7 @@ namespace ScreenShareClient
                 while (bytesRead < imageLength)
                 {
                     int toReceive = Math.Min(bufferSize, imageLength - bytesRead);
-                    int read = await _clientSocket.ReceiveAsync(
+                    int read = await _currentSocket.ReceiveAsync(
                         new ArraySegment<byte>(imageBuffer, bytesRead, toReceive),
                         SocketFlags.None);
                     if (read == 0) return null;
