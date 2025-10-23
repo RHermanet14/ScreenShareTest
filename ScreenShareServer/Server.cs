@@ -12,6 +12,7 @@ namespace ScreenShareServer
         private volatile bool isRunning = false;
         private Connection? connection = null;
         private Task? _backgroundTask;
+        private CancellationTokenSource? _cts;
         #endregion
 
         public Server()
@@ -29,37 +30,68 @@ namespace ScreenShareServer
             StartButton.Enabled = false;
             StopButton.Enabled = true;
             connection = new Connection(int.Parse(PortTextBox.Text));
-            isRunning = connection.Connect();
-            if (isRunning)
-            {
-                _backgroundTask = Task.Run(RunServer);
-            } 
-            else {
-                MessageBox.Show($"Error: connect function returned false");
-                StopButton_Click(sender, e);
-            }
+            _cts = new CancellationTokenSource();
+            _backgroundTask = Task.Run(() => RunServer(_cts.Token));
         }
 
-        private void RunServer()
+        private void StopToken()
+        {
+            _cts?.Cancel();
+        }
+
+        private async Task StopTokenAsync()
+        {
+            _cts?.Cancel();
+            if (_backgroundTask != null)
+            {
+                try
+                {
+                    await _backgroundTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    //
+                }
+            }
+            _cts?.Dispose();
+            _cts = null;
+        }
+
+        private async Task RunServer(CancellationToken ct)
         {
             byte[] arr;
             try
             {
+                isRunning = connection!.Connect();
+                if (!isRunning)
+                {
+                    Invoke(() => { // So UI will appear even though its on background thread
+                        MessageBox.Show("Error: Connect function returned false.");
+                        StopButton_Click(this, EventArgs.Empty);
+                    });
+                    return;
+                }
                 while (isRunning)
                 {
                     if (connection == null) return;
                     arr = connection.GetScreen();
-                    connection.SendScreen(arr);
+                    await connection.SendScreen(arr);
                 }
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show("Operation was cancelled.");
+                Invoke(() =>
+                {
+                    MessageBox.Show("Operation was cancelled.");
+                });
                 return;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error: " + ex.Message);
+                Invoke(() =>
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                });
                 return;
             }
         }
@@ -83,6 +115,7 @@ namespace ScreenShareServer
             isRunning = false;
             connection?.Disconnect();
             connection = null;
+            StopTokenAsync().Wait(); // Or just StopToken();
         }
 
         private void Server_Load(object sender, EventArgs e)
@@ -170,7 +203,7 @@ namespace ScreenShareServer
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}");
+                MessageBox.Show($"Error: fickle {ex.Message}");
                 serverSocket?.Close();
                 _isConnected = false;
                 return false;
