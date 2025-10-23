@@ -63,11 +63,13 @@ namespace ScreenShareClient
             byte[] bitmap;
             try
             {
-                bool isRunning = connection!.Connect(); // move connection initialization into RunClient?
+                isRunning = connection!.Connect(); // move connection initialization into RunClient?
                 if (!isRunning)
                 {
-                    MessageBox.Show("Error: connect function returned false");
-                    DisconnectButton.Invoke(new Action(() => DisconnectButton.Enabled = false));
+                    Invoke(() => {
+                        MessageBox.Show("Error: Could not connect to server");
+                        DisconnectButton_Click(this, EventArgs.Empty); // Might need Invoke in click function and bool if coming from background thread
+                    });
                     return;
                 }
                 while (isRunning && !ct.IsCancellationRequested)
@@ -75,7 +77,10 @@ namespace ScreenShareClient
                     if (connection == null) return;
                     if (!connection.AcceptRequest())
                     {
-                        MessageBox.Show("Error: AcceptRequest function returned false");
+                        Invoke(() =>
+                        {
+                            MessageBox.Show("Error: AcceptRequest function returned false");
+                        });
                         return;
                     }
                     bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
@@ -85,13 +90,18 @@ namespace ScreenShareClient
             }
             catch(OperationCanceledException)
             {
-                MessageBox.Show("Operation was cancelled.");
+                Invoke(() =>
+                {
+                    MessageBox.Show("Operation was cancelled.");
+                });
                 // Handle cancellation if needed
                 return;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error: " + ex.Message);
+                Invoke(() => {
+                    MessageBox.Show("Error: " + ex.Message);
+                });
                 return;
             } 
         }
@@ -279,7 +289,7 @@ namespace ScreenShareClient
 
         public async Task<byte[]?> GetScreen()
         {
-            if (!_isConnected || _clientSocket == null) return null; // Must act like Kvm Server!!!
+            if (!_isConnected || _currentSocket == null) return null; // Must act like Kvm Server!!!
             
             try
             {
@@ -288,7 +298,7 @@ namespace ScreenShareClient
 
                 while (bytesRead < 4)
                 {
-                    int read = await _clientSocket.ReceiveAsync(
+                    int read = await _currentSocket.ReceiveAsync(
                         new ArraySegment<byte>(
                             lengthBuffer, bytesRead, 4 - bytesRead
                         ), SocketFlags.None
@@ -305,7 +315,7 @@ namespace ScreenShareClient
                 while (bytesRead < imageLength)
                 {
                     int toReceive = Math.Min(bufferSize, imageLength - bytesRead);
-                    int read = await _clientSocket.ReceiveAsync(
+                    int read = await _currentSocket.ReceiveAsync(
                         new ArraySegment<byte>(imageBuffer, bytesRead, toReceive),
                         SocketFlags.None);
                     if (read == 0) return null;
