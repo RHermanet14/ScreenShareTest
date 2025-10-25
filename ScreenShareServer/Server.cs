@@ -71,7 +71,7 @@ namespace ScreenShareServer
                     });
                     return;
                 }
-                while (isRunning)
+                while (isRunning && !ct.IsCancellationRequested)
                 {
                     if (connection == null) return;
                     arr = connection.GetScreen();
