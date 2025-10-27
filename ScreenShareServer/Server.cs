@@ -71,11 +71,24 @@ namespace ScreenShareServer
                     });
                     return;
                 }
+
+                if (!await connection.WaitForClient())
+                {
+                    Invoke(() => {
+                        MessageBox.Show("Error: Failed to accept client connection.");
+                        StopButton_Click(this, EventArgs.Empty);
+                    });
+                    return;
+                }
+
                 while (isRunning && !ct.IsCancellationRequested)
                 {
                     if (connection == null) return;
                     arr = connection.GetScreen();
                     await connection.SendScreen(arr);
+                    
+                    // Small delay to prevent overwhelming the client
+                    await Task.Delay(100, ct);
                 }
             }
             catch (OperationCanceledException)
@@ -181,6 +194,7 @@ namespace ScreenShareServer
     public partial class Connection
     {
         private Socket? serverSocket;
+        private Socket? clientSocket;
         private readonly int Port;
         private volatile bool _isConnected = false;
 
@@ -197,15 +211,31 @@ namespace ScreenShareServer
             try
             {
                 serverSocket.Bind(localEndPoint);
-                serverSocket.Listen(); // Max pending connections
+                serverSocket.Listen(1); // Max pending connections
                 _isConnected = true;
                 return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: fickle {ex.Message}");
+                MessageBox.Show($"Error: {ex.Message}");
                 serverSocket?.Close();
                 _isConnected = false;
+                return false;
+            }
+        }
+
+        public async Task<bool> WaitForClient()
+        {
+            if (!_isConnected || serverSocket == null) return false;
+            
+            try
+            {
+                clientSocket = await serverSocket.AcceptAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error accepting client: {ex.Message}");
                 return false;
             }
         }
@@ -213,6 +243,16 @@ namespace ScreenShareServer
         public void Disconnect()
         {
             _isConnected = false;
+            try
+            {
+                clientSocket?.Shutdown(SocketShutdown.Both);
+                clientSocket?.Close();
+            }
+            catch
+            {
+                //nothing for now
+            }
+            
             try
             {
                 serverSocket?.Shutdown(SocketShutdown.Both);
@@ -240,7 +280,7 @@ namespace ScreenShareServer
 
         public async Task<bool> SendScreen(byte[] screen)
         {
-            if (!_isConnected || serverSocket == null) return false;
+            if (!_isConnected || clientSocket == null) return false;
 
             try
             {
@@ -248,7 +288,7 @@ namespace ScreenShareServer
                 int bytesSent = 0;
                 while (bytesSent < 4)
                 {
-                    int sent = await serverSocket.SendAsync(
+                    int sent = await clientSocket.SendAsync(
                         new ArraySegment<byte>(lengthBuffer, bytesSent, 4 - bytesSent),
                         SocketFlags.None
                     );
@@ -261,7 +301,7 @@ namespace ScreenShareServer
                 while (bytesSent < screen.Length)
                 {
                     int toSend = Math.Min(bufferSize, screen.Length - bytesSent);
-                    int sent = await serverSocket.SendAsync(
+                    int sent = await clientSocket.SendAsync(
                         new ArraySegment<byte>(screen, bytesSent, toSend),
                         SocketFlags.None
                     );
