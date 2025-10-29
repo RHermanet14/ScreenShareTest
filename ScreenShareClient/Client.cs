@@ -121,11 +121,16 @@ namespace ScreenShareClient
 
         private void DisconnectButton_Click(object sender, EventArgs e)
         {
-            DisconnectButton.Enabled = false;
-            ConnectButton.Enabled = true;
-            Disconnect();
-            //StopToken();
-            // TODO
+            try
+            {
+                DisconnectButton.Enabled = false;
+                ConnectButton.Enabled = true;
+                Disconnect();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error disconnecting: {ex.Message}");
+            }
         }
 
         private void Client_Load(object sender, EventArgs e)
@@ -218,10 +223,17 @@ namespace ScreenShareClient
 
         private void Disconnect()
         {
-            isRunning = false;
-            connection?.Disconnect();
-            connection = null;
-            StopTokenAsync().Wait(); // Or just StopToken();
+            try
+            {
+                isRunning = false;
+                connection?.Disconnect();
+                connection = null;
+                StopToken(); // Use synchronous version to avoid deadlock
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error during disconnect: {ex.Message}");
+            }
         }
     }
 

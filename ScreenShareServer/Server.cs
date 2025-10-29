@@ -111,10 +111,16 @@ namespace ScreenShareServer
 
         private void StopButton_Click(object sender, EventArgs e)
         {
-            StartButton.Enabled = true;
-            StopButton.Enabled = false;
-            KillServer();
-            isRunning = false;
+            try
+            {
+                StartButton.Enabled = true;
+                StopButton.Enabled = false;
+                KillServer();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error stopping server: {ex.Message}");
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -125,10 +131,17 @@ namespace ScreenShareServer
 
         private void KillServer()
         {
-            isRunning = false;
-            connection?.Disconnect();
-            connection = null;
-            StopTokenAsync().Wait(); // Or just StopToken();
+            try
+            {
+                isRunning = false;
+                connection?.Disconnect();
+                connection = null;
+                StopToken(); // Use synchronous version to avoid deadlock
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error killing server: {ex.Message}");
+            }
         }
 
         private void Server_Load(object sender, EventArgs e)
