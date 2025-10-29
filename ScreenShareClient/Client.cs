@@ -75,7 +75,7 @@ namespace ScreenShareClient
                 while (isRunning && !ct.IsCancellationRequested)
                 {
                     if (connection == null) return;
-                    bitmap = await connection.GetScreen() ?? [0]; // temp fix + change to use _currentSocket
+                    bitmap = await connection.GetScreen() ?? [0];
                     SetPictureBox(bitmap);
                     isRunning = connection.StillRunning(); // Needed?
                 }
@@ -104,8 +104,6 @@ namespace ScreenShareClient
 
             try
             {
-                pictureBox.Image?.Dispose();
-                pictureBox.Image = null;
                 using (var ms = new MemoryStream(imageBuffer))
                 {
                     using var originalImage = Image.FromStream(ms);
@@ -138,7 +136,6 @@ namespace ScreenShareClient
             LoadPreferences();
             DisconnectButton.Enabled = false;
             KeyDown += new KeyEventHandler(Client_KeyDown);
-            // TODO
         }
 
         private void Client_KeyDown(object? sender, KeyEventArgs e)
@@ -318,7 +315,7 @@ namespace ScreenShareClient
 
         public bool StillRunning()
         {
-            return _isConnected; // TODO
+            return _isConnected;
         }
 
         public void Disconnect()
