@@ -77,6 +77,7 @@ namespace ScreenShareClient
                     if (connection == null) return;
                     bitmap = await connection.GetScreen() ?? [0];
                     SetPictureBox(bitmap);
+                    if (connection == null) return; // Find a better way
                     isRunning = connection.StillRunning(); // Needed?
                 }
             }
