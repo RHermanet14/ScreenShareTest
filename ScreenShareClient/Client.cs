@@ -83,11 +83,10 @@ namespace ScreenShareClient
             }
             catch(OperationCanceledException)
             {
-                Invoke(() =>
+                /*Invoke(() =>
                 {
-                    MessageBox.Show("Operation was cancelled.");
-                });
-                // Handle cancellation if needed
+                    MessageBox.Show("Operation was cancelled."); // Expected
+                });*/
                 return;
             }
             catch (Exception ex)
