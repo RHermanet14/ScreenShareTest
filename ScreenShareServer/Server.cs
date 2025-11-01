@@ -85,10 +85,8 @@ namespace ScreenShareServer
                 {
                     if (connection == null) return;
                     arr = connection.GetScreen();
+                    if (connection == null) return;
                     await connection.SendScreen(arr);
-                    
-                    // Small delay to prevent overwhelming the client
-                    await Task.Delay(100, ct);
                 }
             }
             catch (OperationCanceledException)
