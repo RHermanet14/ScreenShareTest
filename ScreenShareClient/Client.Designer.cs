@@ -129,7 +129,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(660, 450);
+            ClientSize = new Size(884, 501);
             Controls.Add(pictureBox);
             Controls.Add(FullscreenButton);
             Controls.Add(PortTextBox);
